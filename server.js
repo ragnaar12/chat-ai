@@ -1,56 +1,59 @@
-
-// server.js
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
+
+// Configuration
+const DEEPSEEK_API_KEY = 'sk-ee127fe5fa2f40959d2c50749e905f87'; // À remplacer par votre clé
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-// ⚠️ Clé API en dur (à utiliser uniquement pour des tests)
-const DEEPSEEK_API_KEY = 'sk-ee127fe5fa2f40959d2c50749e905f87';
-
-// Endpoint de chat
+// Route API
 app.post('/chat', async (req, res) => {
-  const { message } = req.body;
+    try {
+        const response = await axios.post(
+            'https://api.deepseek.com/v1/chat/completions',
+            {
+                model: "deepseek-chat",
+                messages: [{ role: "user", content: req.body.message }],
+                temperature: 0.7,
+                max_tokens: 1000
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 15000
+            }
+        );
 
-  if (!message) {
-    return res.status(400).json({ error: 'Message requis' });
-  }
+        res.json({
+            response: response.data.choices[0].message.content,
+            tokens_used: response.data.usage.total_tokens
+        });
 
-  try {
-    const response = await axios.post(
-      'https://api.deepseek.com/v1/chat/completions',
-      {
-        model: "deepseek-chat",
-        messages: [{ role: "user", content: message }],
-        temperature: 0.7
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      }
-    );
+    } catch (error) {
+        console.error('Erreur API DeepSeek:', error.response?.data || error.message);
+        res.status(500).json({
+            error: "Erreur du serveur",
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+});
 
-    res.json({ response: response.data.choices[0].message.content });
-
-  } catch (error) {
-    console.error('Erreur:', error.response?.data || error.message);
-    res.status(500).json({ 
-      error: 'Erreur du serveur',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
+// Route pour servir le frontend
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.listen(port, () => {
-  console.log(`Serveur actif sur http://localhost:${port}`);
-  console.warn('⚠️ Mode non sécurisé : Clé API visible dans le code');
+    console.log(`Serveur démarré sur http://localhost:${port}`);
+    console.log('Mode développement - Clé API visible dans le code');
 });
