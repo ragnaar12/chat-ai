@@ -15,11 +15,11 @@
     #chatbox {
       background: white;
       border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       padding: 15px;
       height: 400px;
       overflow-y: auto;
       margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .input-group {
       display: flex;
@@ -30,7 +30,6 @@
       padding: 10px;
       border: 1px solid #ddd;
       border-radius: 4px;
-      font-size: 16px;
     }
     button {
       background: #4a6bff;
@@ -40,17 +39,9 @@
       border-radius: 4px;
       cursor: pointer;
     }
-    button:hover {
-      background: #3a5bef;
-    }
-    .user {
-      color: #4a6bff;
-      margin-bottom: 8px;
-    }
-    .bot {
-      color: #10a37f;
-      margin-bottom: 15px;
-    }
+    .user { color: #4a6bff; margin-bottom: 8px; }
+    .bot { color: #10a37f; margin-bottom: 15px; }
+    .error { color: #ff4a4a; }
   </style>
 </head>
 <body>
@@ -65,41 +56,44 @@
     const chatbox = document.getElementById("chatbox");
     const userInput = document.getElementById("userInput");
 
-    function addMessage(sender, text) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = sender;
-      messageDiv.innerHTML = `<strong>${sender === 'user' ? 'Vous' : 'Assistant'}:</strong> ${text}`;
-      chatbox.appendChild(messageDiv);
+    function addMessage(sender, text, isError = false) {
+      const div = document.createElement('div');
+      div.className = `${sender} ${isError ? 'error' : ''}`;
+      div.innerHTML = `<strong>${sender === 'user' ? 'Vous' : 'Assistant'}:</strong> ${text}`;
+      chatbox.appendChild(div);
       chatbox.scrollTop = chatbox.scrollHeight;
     }
 
     async function sendMessage() {
       const message = userInput.value.trim();
-      if (!message) return;
+      if (message.length < 2) {
+        addMessage('bot', 'Veuillez écrire au moins 2 caractères.', true);
+        return;
+      }
 
-      userInput.value = '';
       addMessage('user', message);
+      userInput.value = '';
 
       try {
         const response = await fetch('http://localhost:3000/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message }),
+          body: JSON.stringify({ message })
         });
 
         const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
         addMessage('bot', data.response);
       } catch (error) {
-        addMessage('bot', 'Désolé, une erreur est survenue.');
-        console.error('Erreur:', error);
+        addMessage('bot', `Erreur: ${error.message}`, true);
       }
     }
 
+    // Envoi avec la touche Entrée
     userInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendMessage();
     });
   </script>
 </body>
 </html>
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: user
