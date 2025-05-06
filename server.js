@@ -10,9 +10,7 @@ app.use(express.json());
 
 // Initialisation de l'API OpenAI avec clé intégrée directement
 const openai = new OpenAI({
-  apiKey: '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',
-});
-
+  apiKey: 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
 app.post('/chat', async (req, res) => {
   const userMessage = req.body.message;
 
