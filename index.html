@@ -2,73 +2,124 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>UniSign Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HBA-AI - UniSign Assistant</title>
   <style>
-    body { font-family: Arial; margin: 20px; }
-    #chatbox { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; margin-bottom: 10px; }
-    input[type="text"] { width: 80%; padding: 10px; }
-    button { padding: 10px; }
-    .user { color: blue; }
-    .bot { color: green; }
+    :root {
+      --primary: #4a6bff;
+      --secondary: #10a37f;
+    }
+    body { 
+      font-family: 'Segoe UI', Arial; 
+      max-width: 800px; 
+      margin: 0 auto; 
+      padding: 20px;
+      background: #f5f7fa;
+    }
+    #chatbox { 
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 20px; 
+      height: 60vh; 
+      overflow-y: auto; 
+      margin-bottom: 15px;
+    }
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+    input[type="text"] { 
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+    button { 
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #3a5bef;
+    }
+    .user { 
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+    .bot { 
+      color: var(--secondary);
+      margin-bottom: 20px;
+    }
+    .typing {
+      opacity: 0.7;
+      font-style: italic;
+    }
+    @media (max-width: 600px) {
+      #chatbox { height: 50vh; }
+    }
   </style>
 </head>
 <body>
 
-  <h1>HBA-AI - UniSign Assistant</h1>
+  <h1 style="color: var(--primary)">HBA-AI - UniSign Assistant</h1>
   <div id="chatbox"></div>
-  <input type="text" id="userInput" placeholder="Posez une question..." />
-  <button onclick="submitQuestion()">Envoyer</button>
+  <div class="input-group">
+    <input type="text" id="userInput" placeholder="Posez votre question..." />
+    <button onclick="submitQuestion()">Envoyer</button>
+  </div>
 
   <script>
+    const API_URL = 'http://localhost:3000/chat';
+    const chatbox = document.getElementById("chatbox");
+    
+    // FAQ améliorée avec déclencheurs multiples
     const faqList = [
-      { question: "travailler efficacement", response: "Pour travailler efficacement..." },
-      { question: "gestion du temps", response: "La gestion du temps repose sur..." },
-      { question: "trouver motivation", response: "La motivation vient souvent de l'objectif..." },
-      { question: "étudier efficacement", response: "Pour étudier efficacement..." },
-      { question: "prendre des décisions", response: "Prendre une décision nécessite..." },
-      { question: "améliorer mémoire", response: "Pour améliorer votre mémoire..." },
-      { question: "apprendre nouvelles compétences", response: "Pour apprendre une nouvelle compétence..." },
-      { question: "comment surmonter échec", response: "L'échec est une opportunité d'apprentissage..." }
+      { 
+        triggers: ["travailler efficacement", "productivité"],
+        response: "Pour travailler efficacement, priorisez vos tâches avec la matrice Eisenhower et utilisez la technique Pomodoro."
+      },
+      // ... autres FAQ (même format)
     ];
 
-    async function submitQuestion() {
-      const userInput = document.getElementById("userInput").value.toLowerCase().trim();
-      const responsesDiv = document.getElementById("chatbox");
-      document.getElementById("userInput").value = '';
-
-      if (userInput === "") return;
-
-      const match = faqList.find(faq => userInput.includes(faq.question));
-      let responseMessage;
-
-      if (match) {
-        responseMessage = match.response;
-      } else {
-        try {
-          const res = await fetch("http://localhost:3000/chat", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: userInput }),
-          });
-          const data = await res.json();
-          responseMessage = data.response;
-        } catch (error) {
-          console.error("Erreur:", error);
-          responseMessage = "Erreur de connexion à ChatGPT.";
-        }
-      }
-
-      responsesDiv.innerHTML += `<div class="user"><strong>Vous:</strong> ${userInput}</div>`;
-      responsesDiv.innerHTML += `<div class="bot"><strong>HBA-AI:</strong> ${responseMessage}</div>`;
-      responsesDiv.scrollTop = responsesDiv.scrollHeight;
+    function addMessage(sender, text) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = sender;
+      messageDiv.innerHTML = `<strong>${sender === 'user' ? 'Vous' : 'HBA-AI'}:</strong> ${text}`;
+      chatbox.appendChild(messageDiv);
+      chatbox.scrollTop = chatbox.scrollHeight;
     }
 
-    document.getElementById('userInput').addEventListener('keydown', function(event) {
-      if (event.key === 'Enter') {
-        submitQuestion();
-      }
-    });
-  </script>
+    async function submitQuestion() {
+      const userInput = document.getElementById("userInput").value.trim();
+      if (!userInput) return;
 
-</body>
-</html>
+      document.getElementById("userInput").value = '';
+      addMessage('user', userInput);
+
+      // Typing indicator
+      const typingIndicator = document.createElement('div');
+      typingIndicator.className = 'bot typing';
+      typingIndicator.textContent = "HBA-AI réfléchit...";
+      chatbox.appendChild(typingIndicator);
+      chatbox.scrollTop = chatbox.scrollHeight;
+
+      try {
+        // Vérification FAQ
+        const matchedFAQ = faqList.find(faq => 
+          faq.triggers.some(trigger => userInput.toLowerCase().includes(trigger))
+        );
+
+        let response;
+        if (matchedFAQ) {
+          response = { response: matchedFAQ.response };
+        } else {
+          const res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: user
