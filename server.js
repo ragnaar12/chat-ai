@@ -1,46 +1,79 @@
 const express = require('express');
-const OpenAI = require('openai');
+const axios = require('axios');
 const cors = require('cors');
+require('dotenv').config(); // Pour gérer les variables d'environnement
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
-app.use(cors());
+// Configuration sécurisée
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://votre-domaine.com'] // Limitez les origines autorisées
+}));
 app.use(express.json());
 
-// Initialisation de l'API OpenAI avec la clé API intégrée
-const openai = new OpenAI({
-  apiKey: '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',  // Remplacer par ta clé API
-});
+// Charge la clé depuis les variables d'environnement (fichier .env)
+const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'sk-ee127fe5fa2f40959d2c50749e905f87';
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
-app.post('/chat', async (req, res) => {
-  const userMessage = req.body.message;
+// Middleware de vérification d'API Key (optionnel)
+const checkApiKey = (req, res, next) => {
+  const clientApiKey = req.headers['x-api-key'];
+  if (!clientApiKey || clientApiKey !== 'UN_SECRET_POUR_FRONTEND') {
+    return res.status(403).json({ error: 'Accès non autorisé' });
+  }
+  next();
+};
 
-  if (!userMessage) {
-    return res.status(400).json({ error: 'Message utilisateur manquant.' });
+app.post('/chat', checkApiKey, async (req, res) => {
+  const { message, temperature = 0.7 } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ error: 'Message requis' });
   }
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: userMessage }],
+    const response = await axios.post(
+      DEEPSEEK_API_URL,
+      {
+        model: "deepseek-chat",
+        messages: [{ role: "user", content: message }],
+        temperature: Math.min(Math.max(parseFloat(temperature), 0.1), 1.0), // Borné entre 0.1 et 1.0
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        timeout: 10000 // 10 secondes max
+      }
+    );
+
+    res.json({ 
+      response: response.data.choices[0].message.content,
+      usage: response.data.usage // Ajoute les stats d'utilisation
     });
 
-    res.json({ response: completion.choices[0].message.content });
   } catch (error) {
-    console.error('Erreur lors de la communication avec OpenAI:', error);
+    console.error('Erreur DeepSeek:', error.code, error.message);
 
-    if (error.response) {
-      console.error('Détails de l\'erreur :', error.response.data);
-      res.status(500).json({ error: 'Erreur de connexion à l\'API OpenAI.', details: error.response.data });
-    } else {
-      res.status(500).json({ error: 'Erreur de serveur interne lors de la communication avec ChatGPT.' });
-    }
+    // Gestion fine des erreurs
+    const statusCode = error.response?.status || 500;
+    const errorMessage = error.response?.data?.error?.message || 'Erreur serveur';
+
+    res.status(statusCode).json({ 
+      error: errorMessage,
+      details: statusCode === 500 ? undefined : error.response?.data 
+    });
   }
 });
 
+// Démarrer le serveur
 app.listen(port, () => {
-  console.log(`Serveur UniSign connecté à ChatGPT : http://localhost:${port}`);
+  console.log(`Serveur DeepSeek actif sur http://localhost:${port}`);
+  if (!process.env.DEEPSEEK_API_KEY) {
+    console.warn('⚠️  Avertissement : Clé API en dur détectée (à remplacer par une variable d\'environnement)');
+  }
 });
 
 
