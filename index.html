@@ -1,125 +1,105 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HBA-AI - UniSign Assistant</title>
+  <title>Assistant DeepSeek</title>
   <style>
-    :root {
-      --primary: #4a6bff;
-      --secondary: #10a37f;
-    }
-    body { 
-      font-family: 'Segoe UI', Arial; 
-      max-width: 800px; 
-      margin: 0 auto; 
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
       padding: 20px;
-      background: #f5f7fa;
+      background: #f5f5f5;
     }
-    #chatbox { 
+    #chatbox {
       background: white;
       border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      padding: 20px; 
-      height: 60vh; 
-      overflow-y: auto; 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 15px;
+      height: 400px;
+      overflow-y: auto;
       margin-bottom: 15px;
     }
     .input-group {
       display: flex;
       gap: 10px;
     }
-    input[type="text"] { 
+    #userInput {
       flex: 1;
-      padding: 12px;
+      padding: 10px;
       border: 1px solid #ddd;
       border-radius: 4px;
       font-size: 16px;
     }
-    button { 
-      background: var(--primary);
+    button {
+      background: #4a6bff;
       color: white;
       border: none;
       padding: 0 20px;
       border-radius: 4px;
       cursor: pointer;
-      transition: background 0.3s;
     }
     button:hover {
       background: #3a5bef;
     }
-    .user { 
-      color: var(--primary);
+    .user {
+      color: #4a6bff;
       margin-bottom: 8px;
     }
-    .bot { 
-      color: var(--secondary);
-      margin-bottom: 20px;
-    }
-    .typing {
-      opacity: 0.7;
-      font-style: italic;
-    }
-    @media (max-width: 600px) {
-      #chatbox { height: 50vh; }
+    .bot {
+      color: #10a37f;
+      margin-bottom: 15px;
     }
   </style>
 </head>
 <body>
-
-  <h1 style="color: var(--primary)">HBA-AI - UniSign Assistant</h1>
+  <h1>Assistant DeepSeek</h1>
   <div id="chatbox"></div>
   <div class="input-group">
     <input type="text" id="userInput" placeholder="Posez votre question..." />
-    <button onclick="submitQuestion()">Envoyer</button>
+    <button onclick="sendMessage()">Envoyer</button>
   </div>
 
   <script>
-    const API_URL = 'http://localhost:3000/chat';
     const chatbox = document.getElementById("chatbox");
-    
-    // FAQ améliorée avec déclencheurs multiples
-    const faqList = [
-      { 
-        triggers: ["travailler efficacement", "productivité"],
-        response: "Pour travailler efficacement, priorisez vos tâches avec la matrice Eisenhower et utilisez la technique Pomodoro."
-      },
-      // ... autres FAQ (même format)
-    ];
+    const userInput = document.getElementById("userInput");
 
     function addMessage(sender, text) {
       const messageDiv = document.createElement('div');
       messageDiv.className = sender;
-      messageDiv.innerHTML = `<strong>${sender === 'user' ? 'Vous' : 'HBA-AI'}:</strong> ${text}`;
+      messageDiv.innerHTML = `<strong>${sender === 'user' ? 'Vous' : 'Assistant'}:</strong> ${text}`;
       chatbox.appendChild(messageDiv);
       chatbox.scrollTop = chatbox.scrollHeight;
     }
 
-    async function submitQuestion() {
-      const userInput = document.getElementById("userInput").value.trim();
-      if (!userInput) return;
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (!message) return;
 
-      document.getElementById("userInput").value = '';
-      addMessage('user', userInput);
-
-      // Typing indicator
-      const typingIndicator = document.createElement('div');
-      typingIndicator.className = 'bot typing';
-      typingIndicator.textContent = "HBA-AI réfléchit...";
-      chatbox.appendChild(typingIndicator);
-      chatbox.scrollTop = chatbox.scrollHeight;
+      userInput.value = '';
+      addMessage('user', message);
 
       try {
-        // Vérification FAQ
-        const matchedFAQ = faqList.find(faq => 
-          faq.triggers.some(trigger => userInput.toLowerCase().includes(trigger))
-        );
+        const response = await fetch('http://localhost:3000/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message }),
+        });
 
-        let response;
-        if (matchedFAQ) {
-          response = { response: matchedFAQ.response };
-        } else {
-          const res = await fetch(API_URL, {
-            method: "POST",
+        const data = await response.json();
+        addMessage('bot', data.response);
+      } catch (error) {
+        addMessage('bot', 'Désolé, une erreur est survenue.');
+        console.error('Erreur:', error);
+      }
+    }
+
+    userInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message: user
