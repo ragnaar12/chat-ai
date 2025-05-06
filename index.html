@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>UniSign Assistant</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    #chatbox { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; margin-bottom: 10px; }
+    input[type="text"] { width: 80%; padding: 10px; }
+    button { padding: 10px; }
+    .user { color: blue; }
+    .bot { color: green; }
+  </style>
+</head>
+<body>
+
+  <h1>HBA-AI - UniSign Assistant</h1>
+  <div id="chatbox"></div>
+  <input type="text" id="userInput" placeholder="Posez une question..." />
+  <button onclick="submitQuestion()">Envoyer</button>
+
+  <script>
+    const faqList = [
+      { question: "travailler efficacement", response: "Pour travailler efficacement..." },
+      { question: "gestion du temps", response: "La gestion du temps repose sur..." },
+      { question: "trouver motivation", response: "La motivation vient souvent de l'objectif..." },
+      { question: "étudier efficacement", response: "Pour étudier efficacement..." },
+      { question: "prendre des décisions", response: "Prendre une décision nécessite..." },
+      { question: "améliorer mémoire", response: "Pour améliorer votre mémoire..." },
+      { question: "apprendre nouvelles compétences", response: "Pour apprendre une nouvelle compétence..." },
+      { question: "comment surmonter échec", response: "L'échec est une opportunité d'apprentissage..." }
+    ];
+
+    async function submitQuestion() {
+      const userInput = document.getElementById("userInput").value.toLowerCase().trim();
+      const responsesDiv = document.getElementById("chatbox");
+      document.getElementById("userInput").value = '';
+
+      if (userInput === "") return;
+
+      const match = faqList.find(faq => userInput.includes(faq.question));
+      let responseMessage;
+
+      if (match) {
+        responseMessage = match.response;
+      } else {
+        try {
+          const res = await fetch("http://localhost:3000/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: userInput }),
+          });
+          const data = await res.json();
+          responseMessage = data.response;
+        } catch (error) {
+          console.error("Erreur:", error);
+          responseMessage = "Erreur de connexion à ChatGPT.";
+        }
+      }
+
+      responsesDiv.innerHTML += `<div class="user"><strong>Vous:</strong> ${userInput}</div>`;
+      responsesDiv.innerHTML += `<div class="bot"><strong>HBA-AI:</strong> ${responseMessage}</div>`;
+      responsesDiv.scrollTop = responsesDiv.scrollHeight;
+    }
+
+    document.getElementById('userInput').addEventListener('keydown', function(event) {
+      if (event.key === 'Enter') {
+        submitQuestion();
+      }
+    });
+  </script>
+
+</body>
+</html>
