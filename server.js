@@ -1,7 +1,6 @@
 const express = require('express');
 const OpenAI = require('openai');
 const cors = require('cors');
-require('dotenv').config(); // Pour charger les variables d'environnement depuis un fichier .env
 
 const app = express();
 const port = 3000;
@@ -9,9 +8,9 @@ const port = 3000;
 app.use(cors());
 app.use(express.json());
 
-// Initialisation de l'API OpenAI avec la clé API depuis les variables d'environnement
+// Initialisation de l'API OpenAI avec clé intégrée directement
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: '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',
 });
 
 app.post('/chat', async (req, res) => {
@@ -37,4 +36,5 @@ app.post('/chat', async (req, res) => {
 app.listen(port, () => {
   console.log(`Serveur UniSign connecté à ChatGPT : http://localhost:${port}`);
 });
+
 
